@@ -4,25 +4,32 @@
 #include <string>
 #include <iostream>
 #include <sys/socket.h>
+#include <string>
+#include <vector>
+#include <algorithm>
+
 
 
 class Client
 {
     private:
-        int fd;
-        std::string nickname;
-        std::string username;
-        std::string buffer;
-        bool authenticated;
-        bool isconnected;
-        time_t connectionTime;
-
+    bool authenticated;
+    std::string nickname;
+    std::string username;
+    bool isconnected;
+    // std::string buffer;
+    time_t connectionTime;
+    std::vector<std::string> joinedChannels;
+    
+    
     public:
+        int fd;
+        int password;
         Client(int fd_);
         ~Client();
 
         int getFd() const;
-        std::string getBuffer();
+        // std::string getBuffer();
         //PASS
         bool isAuthenticated() const;
         void setAuthenticated(bool val);
@@ -37,8 +44,13 @@ class Client
         std::string getName() const;
 
         void send_welcome(Client &client);
-        bool checkRegistration(Client &client);
-        time_t getConnectionTime() const;
+
+        void sendMsg(const std::string &msg) const;
+
+        //channels joined
+        void addChannel(const std::string &name);
+        void removeChannel(const std::string &name);
+        const std::vector<std::string>& getChannels() const;
 
 };
 
