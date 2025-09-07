@@ -18,8 +18,9 @@ class Channel
          const std::string &getName() const;
         const std::string &getKey() const;
         const std::vector<Client*> &getClients() const;
-
-        void addClient(Client *client);
+        bool isMember(Client &client);
+    void addClient(Client *client);
+    void removeClient(Client *client);
         bool hasClient(Client *client) const;
 };
 

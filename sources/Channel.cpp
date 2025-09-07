@@ -1,5 +1,17 @@
 #include "../include/Channel.hpp"
 
+void Channel::removeClient(Client *client)
+{
+    for (std::vector<Client*>::iterator it = Clients.begin(); it != Clients.end(); ++it)
+    {
+        if (*it == client)
+        {
+            Clients.erase(it);
+            break;
+        }
+    }
+}
+
 Channel::Channel(const std::string &name) : name(name), key("")
 {
 }

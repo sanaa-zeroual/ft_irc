@@ -14,5 +14,6 @@ void handleNick(Client &client, const std::string &line, const std::vector<Clien
 void handleUser(Client &client, const std::string &line);
 void handleJoin(Client &client, const std::string &line, std::map<std::string, Channel*> &channels);
 void handlePrivmsg(Client &sender, const std::string &line, const std::vector<Client*> &clients, std::map<std::string, Channel*> &channels);
-
+void handleKick(Client &kicker, const std::string &line, std::vector<Client*> &clients, std::map<std::string, Channel*> &channels);
+void handleInvite(Client &client, const std::string &line, std::vector<Client*> &clients, std::map<std::string, Channel*> &channels);
 #endif
