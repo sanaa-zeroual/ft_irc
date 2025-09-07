@@ -186,10 +186,8 @@ void handlePrivmsg(Client &sender, const std::string &line, const std::vector<Cl
         i++;
     }
 }
-// ...existing code...
 
 void handleInvite(Client &inviter, const std::string &line, std::vector<Client*> &clients, std::map<std::string, Channel*> &channels) {
-    // Syntax: INVITE <nick> <channel>
     std::vector<std::string> tokens = split(line, ' ');
     if (tokens.size() < 2) {
         inviter.sendMsg(":irc.server 461 INVITE :Not enough parameters\r\n");
@@ -198,20 +196,17 @@ void handleInvite(Client &inviter, const std::string &line, std::vector<Client*>
     std::string targetNick = tokens[0];
     std::string channelName = tokens[1];
 
-    // Check if channel exists
     if (channels.find(channelName) == channels.end()) {
         inviter.sendMsg(":irc.server 403 " + channelName + " :No such channel\r\n");
         return;
     }
     Channel *ch = channels[channelName];
 
-    // Check if inviter is on the channel
     if (!ch->hasClient(&inviter)) {
         inviter.sendMsg(":irc.server 442 " + channelName + " :You're not on that channel\r\n");
         return;
     }
 
-    // Find target client
     Client *target = NULL;
     for (size_t i = 0; i < clients.size(); ++i) {
         if (clients[i]->getNick() == targetNick) {
@@ -224,17 +219,14 @@ void handleInvite(Client &inviter, const std::string &line, std::vector<Client*>
         return;
     }
 
-    // Check if target is already on the channel
     if (ch->hasClient(target)) {
         inviter.sendMsg(":irc.server 443 " + targetNick + " " + channelName + " :is already on channel\r\n");
         return;
     }
 
-    // Send invite message to target
     std::string inviteMsg = ":" + inviter.getNick() + " INVITE " + targetNick + " :" + channelName + "\r\n";
     target->sendMsg(inviteMsg);
 
-    // Notify inviter of success
     inviter.sendMsg(":irc.server 341 " + inviter.getNick() + " " + targetNick + " " + channelName + "\r\n");
 }
 
@@ -318,10 +310,8 @@ void handleCommand(Client &client, const std::string &line, const std::string &s
     }
 }
 
-// ...existing handleKick remains unchanged...
 
 void handleKick(Client &kicker, const std::string &line, std::vector<Client*> &clients, std::map<std::string, Channel*> &channels) {
-    // Syntax: KICK <channel> <user> [:comment]
     std::vector<std::string> tokens = split(line, ' ');
     if (tokens.size() < 2) {
         kicker.sendMsg(":irc.server 461 KICK :Not enough parameters\r\n");
@@ -339,7 +329,6 @@ void handleKick(Client &kicker, const std::string &line, std::vector<Client*> &c
         kicker.sendMsg(":irc.server 442 " + channelName + " :You're not on that channel\r\n");
         return;
     }
-    // Find target client
     Client *target = NULL;
     for (size_t i = 0; i < clients.size(); ++i) {
         if (clients[i]->getNick() == targetNick) {
