@@ -187,48 +187,6 @@ void handlePrivmsg(Client &sender, const std::string &line, const std::vector<Cl
     }
 }
 
-void handleInvite(Client &inviter, const std::string &line, std::vector<Client*> &clients, std::map<std::string, Channel*> &channels) {
-    std::vector<std::string> tokens = split(line, ' ');
-    if (tokens.size() < 2) {
-        inviter.sendMsg(":irc.server 461 INVITE :Not enough parameters\r\n");
-        return;
-    }
-    std::string targetNick = tokens[0];
-    std::string channelName = tokens[1];
-
-    if (channels.find(channelName) == channels.end()) {
-        inviter.sendMsg(":irc.server 403 " + channelName + " :No such channel\r\n");
-        return;
-    }
-    Channel *ch = channels[channelName];
-
-    if (!ch->hasClient(&inviter)) {
-        inviter.sendMsg(":irc.server 442 " + channelName + " :You're not on that channel\r\n");
-        return;
-    }
-
-    Client *target = NULL;
-    for (size_t i = 0; i < clients.size(); ++i) {
-        if (clients[i]->getNick() == targetNick) {
-            target = clients[i];
-            break;
-        }
-    }
-    if (!target) {
-        inviter.sendMsg(":irc.server 401 " + targetNick + " :No such nick\r\n");
-        return;
-    }
-
-    if (ch->hasClient(target)) {
-        inviter.sendMsg(":irc.server 443 " + targetNick + " " + channelName + " :is already on channel\r\n");
-        return;
-    }
-
-    std::string inviteMsg = ":" + inviter.getNick() + " INVITE " + targetNick + " :" + channelName + "\r\n";
-    target->sendMsg(inviteMsg);
-
-    inviter.sendMsg(":irc.server 341 " + inviter.getNick() + " " + targetNick + " " + channelName + "\r\n");
-}
 
 void handleCommand(Client &client, const std::string &line, const std::string &serverPass, const std::vector<Client*> &clients, std::map<std::string, Channel*> &channels)
 {
