@@ -199,16 +199,6 @@ void handleCommand(Client &client, const std::string &line, const std::string &s
         handleNick(client, text, clients);
     else if (command == "USER" && client.isAuthenticated())
         handleUser(client, text);
-    else if(command == "KICK")
-    {
-        std::string kickLine = extractString(line);
-        handleKick(client, kickLine, const_cast<std::vector<Client*>&>(clients), channels);
-    }
-    else if(command == "INVITE")
-    {
-        std::string inviteLine = extractString(line);
-        handleInvite(client, inviteLine, const_cast<std::vector<Client*>&>(clients), channels);
-    }
     else if (command == "SHOW")
     {
         std::string msg = "=== Connected Clients ===\r\n";
@@ -266,46 +256,6 @@ void handleCommand(Client &client, const std::string &line, const std::string &s
         }
 
     }
-}
-
-
-void handleKick(Client &kicker, const std::string &line, std::vector<Client*> &clients, std::map<std::string, Channel*> &channels) {
-    std::vector<std::string> tokens = split(line, ' ');
-    if (tokens.size() < 2) {
-        kicker.sendMsg(":irc.server 461 KICK :Not enough parameters\r\n");
-        return;
-    }
-    std::string channelName = tokens[0];
-    std::string targetNick = tokens[1];
-    std::string comment = (tokens.size() > 2) ? line.substr(line.find(targetNick) + targetNick.length()) : "";
-    if (channels.find(channelName) == channels.end()) {
-        kicker.sendMsg(":irc.server 403 " + channelName + " :No such channel\r\n");
-        return;
-    }
-    Channel *ch = channels[channelName];
-    if (!ch->hasClient(&kicker)) {
-        kicker.sendMsg(":irc.server 442 " + channelName + " :You're not on that channel\r\n");
-        return;
-    }
-    Client *target = NULL;
-    for (size_t i = 0; i < clients.size(); ++i) {
-        if (clients[i]->getNick() == targetNick) {
-            target = clients[i];
-            break;
-        }
-    }
-    if (!target || !ch->hasClient(target)) {
-        kicker.sendMsg(":irc.server 441 " + targetNick + " " + channelName + " :They aren't on that channel\r\n");
-        return;
-    }
-    ch->removeClient(target);
-    target->removeChannel(channelName);
-    std::string kickMsg = ":" + kicker.getNick() + " KICK " + channelName + " " + targetNick + " :" + comment + "\r\n";
-    const std::vector<Client*> &chClients = ch->getClients();
-    for (size_t i = 0; i < chClients.size(); ++i) {
-        chClients[i]->sendMsg(kickMsg);
-    }
-    target->sendMsg(kickMsg);
 }
 
 

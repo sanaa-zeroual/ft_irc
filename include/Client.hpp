@@ -18,7 +18,7 @@ class Client
     std::string username;
     bool isconnected;
     // std::string buffer;
-    time_t connectionTime;
+    // time_t connectionTime;
     std::vector<std::string> joinedChannels;
     
     
