@@ -79,12 +79,19 @@ void Client::addChannel(const std::string &name)
         joinedChannels.push_back(name);
 }
 
-void Client::removeChannel(const std::string &name)
-{
-    joinedChannels.erase(std::remove(joinedChannels.begin(), joinedChannels.end(), name), joinedChannels.end());
-}
-
 const std::vector<std::string>& Client::getChannels() const
 {
     return joinedChannels;
+}
+
+void Client::removeChannel(const std::string &name)
+{
+    for (size_t i = 0; i < this->joinedChannels.size(); ++i)
+    {
+        if (this->joinedChannels[i] == name)
+        {
+            this->joinedChannels.erase(joinedChannels.begin() + i);
+            break;
+        }
+    }
 }

@@ -18,7 +18,7 @@ class Client
     std::string username;
     bool isconnected;
     // std::string buffer;
-    // time_t connectionTime;
+    time_t connectionTime;
     std::vector<std::string> joinedChannels;
     
     
@@ -49,8 +49,9 @@ class Client
 
         //channels joined
         void addChannel(const std::string &name);
-        void removeChannel(const std::string &name);
         const std::vector<std::string>& getChannels() const;
+
+        void removeChannel(const std::string &name);
 
 };
 
