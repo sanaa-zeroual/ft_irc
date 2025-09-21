@@ -6,7 +6,8 @@ SRCS    = main.cpp \
 	sources/Client.cpp \
 	sources/Commands.cpp \
 	sources/Utils.cpp \
-	sources/Channel.cpp
+	sources/Channel.cpp \
+	sources/bot.cpp 
 
 OBJS    = $(SRCS:.cpp=.o)
 

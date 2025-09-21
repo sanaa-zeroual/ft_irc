@@ -178,31 +178,65 @@ std::string extractPrivmsgTarget(const std::string &line)
     std::string tmp = line;
     tmp.erase(0, tmp.find_first_not_of(" \t\r\n"));
 
-    std::string cmd = tmp.substr(0, 5);
-    for (size_t i = 0; i < cmd.size(); i++)
-        cmd[i] = toupper(cmd[i]);
-    if (cmd != "PRIVMSG")
+    if (tmp.size() < 7 || tmp.substr(0, 7) != "PRIVMSG")
         return "";
 
-    if (tmp.size() > 7)
-        tmp = tmp.substr(7);
-    else
-        return "";
+    tmp = tmp.substr(7); 
+    tmp.erase(0, tmp.find_first_not_of(" \t\r\n")); // trim left
 
-    tmp.erase(0, tmp.find_first_not_of(" \t\r\n"));
     size_t spacePos = tmp.find(' ');
-    if (spacePos != std::string::npos)
-        tmp = tmp.substr(0, spacePos);
+    if (spacePos == std::string::npos)
+        return "";
 
-    return tmp;
+    return tmp.substr(0, spacePos); // target
 }
+
 std::string extractPrivmsgText(const std::string &line)
 {
     size_t colonPos = line.find(" :");
     if (colonPos == std::string::npos)
+        colonPos = line.find(':'); 
+    if (colonPos == std::string::npos)
         return "";
-    return line.substr(colonPos + 2);
+
+    std::string msg = line.substr(colonPos + 1);
+
+    if (!msg.empty() && msg[0] == ':')
+        msg.erase(0, 1);
+
+    return msg; 
 }
+
+// std::string extractPrivmsgTarget(const std::string &line)
+// {
+//     std::string tmp = line;
+//     tmp.erase(0, tmp.find_first_not_of(" \t\r\n"));
+
+//     std::string cmd = tmp.substr(0, 5);
+//     for (size_t i = 0; i < cmd.size(); i++)
+//         cmd[i] = toupper(cmd[i]);
+//     if (cmd != "PRIVMSG")
+//         return "";
+
+//     if (tmp.size() > 7)
+//         tmp = tmp.substr(7);
+//     else
+//         return "";
+
+//     tmp.erase(0, tmp.find_first_not_of(" \t\r\n"));
+//     size_t spacePos = tmp.find(' ');
+//     if (spacePos != std::string::npos)
+//         tmp = tmp.substr(0, spacePos);
+
+//     return tmp;
+// }
+// std::string extractPrivmsgText(const std::string &line)
+// {
+//     size_t colonPos = line.find(" :");
+//     if (colonPos == std::string::npos)
+//         return "";
+//     return line.substr(colonPos + 2);
+// }
 
 bool nick_exists(const std::string &nick, const std::vector<Client*> &clients)
 {
@@ -216,15 +250,27 @@ bool nick_exists(const std::string &nick, const std::vector<Client*> &clients)
     }
     return (false);
 }
-
 void check_conncetivity(Client &client)
 {
     if (client.isRegistred())
     {
         std::string msg = client.getNick() + " :Welcome to the IRC server!\r\n";
+        client.sendMsg(":irc.server 001 " + client.getNick() + " :Welcome to the IRC server\r\n");
+        client.sendMsg(":irc.server 002 " + client.getNick() + " :Your host is irc.server, running version 1.0\r\n");
+        client.sendMsg(":irc.server 003 " + client.getNick() + " :This server was created just now\r\n");
+        client.sendMsg(":irc.server 004 " + client.getNick() + " irc.server 1.0 o o\r\n");
         client.sendMsg(msg);
     }
 }
+
+// void check_conncetivity(Client &client)
+// {
+//     if (client.isRegistred())
+//     {
+//         std::string msg = client.getNick() + " :Welcome to the IRC server!\r\n";
+//         client.sendMsg(msg);
+//     }
+// }
 
 std::string extractJoinString(const std::string line)
 {

@@ -18,7 +18,7 @@ class Client
     std::string username;
     bool isconnected;
     // std::string buffer;
-    time_t connectionTime;
+    // time_t connectionTime;
     std::vector<std::string> joinedChannels;
     
     
@@ -40,7 +40,7 @@ class Client
         std::string getNick() const;
         bool isRegistred() const;
         //user name
-        void setName(std::string &user_name);
+        void setName(const std::string &user_name);
         std::string getName() const;
 
         void send_welcome(Client &client);

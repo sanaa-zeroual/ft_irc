@@ -1,4 +1,5 @@
 #include "../include/Commands.hpp"
+#include <sstream>
 
 void handlePass(Client &client, const std::string &line, const std::string &sreverPass)
 {
@@ -72,7 +73,7 @@ void handleUser(Client &client, const std::string &line)
 }
 
 
-void handleJoin(Client &client, const std::string &line, std::map<std::string, Channel*> &channels)
+void handleJoin(Client &client, const std::string &line, std::map<std::string, Channel*> &channels, Client* bot)
 {
     if (!client.isRegistred())
     {
@@ -81,12 +82,12 @@ void handleJoin(Client &client, const std::string &line, std::map<std::string, C
     }
 
     std::vector<std::pair<std::string, std::string> > joinVec = parseJoinVec(line, client);
-    size_t i = 0;
-    while (i < joinVec.size())
+    for (size_t i = 0; i < joinVec.size(); ++i)
     {
         std::string channelName = joinVec[i].first;
         std::string key = joinVec[i].second;
         Channel* ch;
+
         if (channels.find(channelName) == channels.end())
         {
             ch = new Channel(channelName);
@@ -96,118 +97,136 @@ void handleJoin(Client &client, const std::string &line, std::map<std::string, C
         else
             ch = channels[channelName];
 
-        if (ch->isInviteOnly() && !ch->isInvited(client.getNick()))//must be coded
+        if (ch->isInviteOnly() && !ch->isInvited(client.getNick()))
         {
             client.sendMsg(":irc.server 473 " + client.getNick() + " " + channelName + " :Cannot join channel (+i)\r\n");
-            return ;
+            continue;
         }
-        if (ch->isKeySet())
+        if (ch->isKeySet() && (key.empty() || key != ch->getKey()))
         {
-            if (key.empty() || key != ch->getKey())
-            {
-                client.sendMsg(":irc.server 475 " + client.getNick() + " " + channelName + " :Cannot join channel (+k)\r\n");
-                return ;
-            }
+            client.sendMsg(":irc.server 475 " + client.getNick() + " " + channelName + " :Cannot join channel (+k)\r\n");
+            continue;
         }
         if (ch->getClients().size() >= ch->getLimit() && ch->getLimit() > 0)
         {
             client.sendMsg(":irc.server 471 " + client.getNick() + " " + channelName + " :Channel is full\r\n");
-            return ;
+            continue;
         }
 
         if (!ch->hasClient(&client))
         {
             ch->addClient(&client);
             client.addChannel(channelName);
-
-            std::string joinMsg = ":" + client.getNick() + " JOIN " + channelName + "\r\n";
-            size_t j = 0;
-            while (j < ch->getClients().size())
-            {
-                ch->getClients()[j]->sendMsg(joinMsg);
-                j++;
-            }
-            std::string namesMsg = ":irc.server 353 " + client.getNick() + " = " + channelName + " :";
-            const std::vector<Client*>& clientsInChannel = ch->getClients();
-            j = 0;
-            while (j < clientsInChannel.size())
-            {
-                namesMsg += clientsInChannel[j]->getNick() + " ";
-                j++;
-            }
-            namesMsg += "\r\n";
-            client.sendMsg(namesMsg);
-
-            client.sendMsg(":irc.server 366 " + client.getNick() + " " + channelName + " :User list complete\r\n");
         }
-        i++;
+
+        std::string joinMsg = ":" + client.getNick() + "!" + client.getName() + "@server JOIN " + channelName + "\r\n";
+        for (size_t j = 0; j < ch->getClients().size(); j++)
+            ch->getClients()[j]->sendMsg(joinMsg);
+
+        if (bot && !ch->hasClient(bot))
+        {
+            ch->addClient(bot);
+            bot->addChannel(channelName);
+
+            std::string botJoinMsg = ":" + bot->getNick() + "!" + bot->getName() + "@server JOIN " + channelName + "\r\n";
+            for (size_t j = 0; j < ch->getClients().size(); j++)
+            {
+                if (ch->getClients()[j] != bot)
+                    ch->getClients()[j]->sendMsg(botJoinMsg);
+            }
+        }
+
+        std::string namesMsg = ":irc.server 353 " + client.getNick() + " = " + channelName + " :";
+        for (size_t j = 0; j < ch->getClients().size(); j++)
+            namesMsg += ch->getClients()[j]->getNick() + " ";
+        namesMsg += "\r\n";
+        client.sendMsg(namesMsg);
+        client.sendMsg(":irc.server 366 " + client.getNick() + " " + channelName + " :User list complete\r\n");
     }
 }
 
-void handlePrivmsg(Client &sender, const std::string &line, const std::vector<Client*> &clients, std::map<std::string, Channel*> &channels)
+void handlePrivmsg(Client &sender, const std::string &line, const std::vector<Client*> &clients,
+                   std::map<std::string, Channel*> &channels, Client* bot)
 {
-    std::string reciev = extractPrivmsgTarget(line);
-    std::string msg = extractPrivmsgText(line);
+    std::string targetStr = extractPrivmsgTarget(line);
+    std::string msg       = extractPrivmsgText(line);
 
-    if (reciev.empty())
-    {
+    if (targetStr.empty()) {
         sender.sendMsg(":irc.server 411 " + sender.getNick() + " :No recipient given\r\n");
-        return ;
+        return;
     }
-    if (msg.empty())
-    {
+    if (msg.empty()) {
         sender.sendMsg(":irc.server 412 " + sender.getNick() + " :No text to send\r\n");
         return;
     }
-    std::vector<std::string> targetList = split(reciev, ',');
-    size_t i = 0;
-    size_t j = 0;
-    std::string target;
-    std::string message;
-    bool found = false;
-    while (i < targetList.size())
-    {
-        target = trim(targetList[i]);
-        Channel *ch;
-        if (!target.empty() && (target[0] == '#' || target[0] == '&' || target[0] == '!' ))
-        {
-            if (channels.find(target) == channels.end())
-            {
+
+    std::vector<std::string> targets = split(targetStr, ',');
+    for (size_t i = 0; i < targets.size(); ++i) {
+        std::string target = trim(targets[i]);
+        if (target.empty())
+            continue;
+
+        if (target[0] == '#' || target[0] == '&' || target[0] == '!') {
+            if (channels.find(target) == channels.end()) {
                 sender.sendMsg(":irc.server 403 " + sender.getNick() + " " + target + " :No such channel\r\n");
-                i++;
                 continue;
             }
-            ch = channels[target];
-            message = ":" + sender.getNick() + " PRIVMSG " + target + " :" + msg + "\r\n";
-            j = 0;
-            while (j < ch->getClients().size())
-            {
+
+            Channel* ch = channels[target];
+            std::string message = ":" + sender.getNick() + "!" + sender.getName() + "@server PRIVMSG " + target + " :" + msg + "\r\n";
+
+            for (size_t j = 0; j < ch->getClients().size(); ++j)
                 if (ch->getClients()[j] != &sender)
                     ch->getClients()[j]->sendMsg(message);
-                j++;
+
+            if (bot && !msg.empty() && msg[0] == '!') {
+                std::string botReply;
+                if (msg == "!hello")
+                    botReply = "Hello " + sender.getNick() + "! You called me.";
+                else if (msg == "!time") {
+                    time_t now = time(0);
+                    botReply = "Server time: " + std::string(ctime(&now));
+                } else
+                    botReply = "I only understand !hello and !time.";
+
+                std::string botMsg = ":" + bot->getNick() + "!" + bot->getName() + "@server PRIVMSG " + target + " :" + botReply + "\r\n";
+
+                for (size_t j = 0; j < ch->getClients().size(); ++j)
+                    if (ch->getClients()[j] != bot)
+                        ch->getClients()[j]->sendMsg(botMsg);
             }
         }
-        else
-        {
-            j = 0;
-            while (j < clients.size())
-            {
-                if (clients[j]->getNick() == target)
-                {
-                    message = ":" + sender.getNick() + " PRIVMSG " + target + " :" + msg + "\r\n";
-                    clients[j]->sendMsg(message);
+        else {
+            bool found = false;
+            for (size_t j = 0; j < clients.size(); ++j) {
+                if (clients[j]->getNick() == target) {
                     found = true;
+
+                    std::string dmMsg = ":" + sender.getNick() + "!" + sender.getName() + "@server PRIVMSG " + target + " :" + msg + "\r\n";
+                    clients[j]->sendMsg(dmMsg);
+
+                    if (bot && target == bot->getNick() && !msg.empty() && msg[0] == '!') {
+                        std::string botReply;
+                        if (msg == "!hello")
+                            botReply = "Hello " + sender.getNick() + "! You called me.";
+                        else if (msg == "!time") {
+                            time_t now = time(0);
+                            botReply = "Server time: " + std::string(ctime(&now));
+                        } else
+                            botReply = "I only understand !hello and !time.";
+
+                        std::string botMsg = ":" + bot->getNick() + "!" + bot->getName() + "@server PRIVMSG " + sender.getNick() + " :" + botReply + "\r\n";
+                        sender.sendMsg(botMsg);
+                    }
                     break;
                 }
-                j++;
             }
             if (!found)
                 sender.sendMsg(":irc.server 401 " + sender.getNick() + " " + target + " :No such nick\r\n");
         }
-        i++;
     }
 }
-#include <sstream>
+
 std::vector<std::string> token_mode(const std::string &line)
 {
     std::vector<std::string> tokens;
@@ -534,7 +553,7 @@ std::string extractInviteString(const std::string line)
     return (trim(joinLine));
 }
 
-void handleCommand(Client &client, const std::string &line, const std::string &serverPass, const std::vector<Client*> &clients, std::map<std::string, Channel*> &channels)
+void handleCommand(Client &client, const std::string &line, const std::string &serverPass, const std::vector<Client*> &clients, std::map<std::string, Channel*> &channels, Client *bot)
 {
     std::string command = extractCommand(line);
     std::string text = extractString(line);
@@ -574,12 +593,12 @@ void handleCommand(Client &client, const std::string &line, const std::string &s
         if (command == "JOIN")
         {
             std::string joinLine = extractJoinString(line);
-            handleJoin(client, joinLine, channels);
+            handleJoin(client, joinLine, channels, bot);
         }
         else if (command == "PRIVMSG")
         {
             std::cout << "enter to private message" << std::endl;
-            handlePrivmsg(client, line, clients, channels);
+            handlePrivmsg(client, line, clients, channels, bot);
         }
         else if (command == "MODE")
         {
@@ -635,4 +654,3 @@ void handleCommand(Client &client, const std::string &line, const std::string &s
 
     }
 }
-//reset

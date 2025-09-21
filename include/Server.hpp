@@ -30,6 +30,7 @@ private:
     std::map<int, std::string> sendBuffers;
 
     Client* getClientByFd(int fd);
+    Client *bot;
 
 public:
 std::map<std::string, Channel*>& getChannels() { return channels; }
@@ -40,8 +41,8 @@ std::map<std::string, Channel*>& getChannels() { return channels; }
     void run();
     std::string CheckCommand(int fd);
     void ExecuteCommand(int fd);
-
-
+    void createBot() ;
+    void botJoinNewChannel(Channel *ch);
 private:
     void acceptClient();
     void handleClient(int index);

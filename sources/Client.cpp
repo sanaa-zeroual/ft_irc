@@ -46,7 +46,7 @@ bool Client::isRegistred() const
     std::string msg;
     return (!this->getNick().empty() && !this->getName().empty() && this->authenticated);
 }
-void Client::setName(std::string &user_name)
+void Client::setName(const std::string &user_name)
 {
     this->username = user_name;
 }
@@ -69,6 +69,11 @@ void Client::send_welcome(Client &client)
 
 void Client::sendMsg(const std::string &msg) const
 {
+    if (fd == -1) { 
+        std::cout << "the bot fd is invalid" << msg;
+        return;
+    }
+
     if (send(fd, msg.c_str(), msg.length(), 0) == -1)
         std::cerr << "Error sending message to client fd " << fd << std::endl;
 }

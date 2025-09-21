@@ -1,5 +1,5 @@
 #include "include/Server.hpp"
-#include <cstdlib>   // for atoi
+#include <cstdlib>
 
 int main(int ac, char **av) {
     if (ac != 3) {
@@ -11,6 +11,7 @@ int main(int ac, char **av) {
     IRCServer server(password, port);
     if (!server.setupServer()) 
         return 1;
+    server.createBot();
     server.run();
     return 0;
 }
